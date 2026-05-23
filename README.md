@@ -10,7 +10,7 @@ This project is intentionally small and hackable: a Pi extension, an `ffmpeg` re
 
 - Pi TUI extension with `/stt` command and `Ctrl+R` shortcut.
 - `Enter`-to-send and `Esc`-to-cancel while recording.
-- Animated footer status (`voice`, `listening`, `transcribing`).
+- Pi-native input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `… transcribing`).
 - `ffmpeg` microphone capture to temporary WAV files.
 - Mistral Voxtral provider.
 - OpenAI-compatible provider for OpenAI, Groq, `whisper.cpp`, `faster-whisper` servers, and local endpoints.
@@ -161,6 +161,8 @@ On Linux, you may prefer PulseAudio/PipeWire (`pulse`) or ALSA (`alsa`) dependin
 
 ## Usage
 
+The voice state is displayed inside the input area, right-aligned on the prompt border, so it stays close to where you are typing without taking over the footer/token line.
+
 | Action | Behavior |
 | --- | --- |
 | `Ctrl+R` while idle | Start recording |
@@ -220,7 +222,7 @@ src/core/                    dictation state machine
 src/audio/                   ffmpeg recorder
 src/providers/               STT provider abstraction
 src/config/                  config loading and validation
-src/ui/                      Pi TUI status indicator
+src/ui/                      Pi TUI input indicator and editor wrapper
 examples/                    ready-to-copy config files
 ```
 
@@ -228,6 +230,7 @@ examples/                    ready-to-copy config files
 
 - Keep provider code independent from Pi so new backends are easy to add.
 - Keep the Pi integration thin and readable.
+- Match Pi's TUI style by default: compact input-border status instead of a separate footer widget.
 - Avoid storing secrets in sessions or config examples.
 - Use only Node built-ins at runtime.
 - Fail safely: clean up temporary files and stop `ffmpeg` on cancel, reload, or exit.

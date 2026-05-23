@@ -1,12 +1,12 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { matchesKey, type KeyId } from "@earendil-works/pi-tui";
+import { type KeyId } from "@earendil-works/pi-tui";
 import { createFfmpegRecorder } from "./audio/ffmpeg-recorder";
 import { loadConfig } from "./config/load-config";
 import { resolveStartupOptions } from "./config/startup";
 import { createDictationController, type DictationToast } from "./core/dictation-controller";
 import { createProvider } from "./providers/factory";
 import { assertProviderReady } from "./providers/readiness";
-import { createStatusIndicator } from "./ui/status-indicator";
+import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
 import { formatError } from "./utils/text";
 
 const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
@@ -28,7 +28,7 @@ const reportError = (ctx: ExtensionContext | undefined, error: unknown): void =>
 export default function piVoiceSttExtension(pi: ExtensionAPI) {
   const startup = resolveStartupOptions();
   const keybind = startup.keybind;
-  const statusIndicator = createStatusIndicator(keybind);
+  const inputIndicator = createInputIndicator(keybind);
 
   const getConfig = () => loadConfig({ configPath: startup.configPath });
 
@@ -53,11 +53,9 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
     },
     notify,
-    onModeChange: (mode, ctx) => statusIndicator.setMode(mode, ctx),
+    onModeChange: (mode) => inputIndicator.setMode(mode),
     onError: reportError,
   });
-
-  let unsubscribeTerminalInput: (() => void) | undefined;
 
   pi.registerShortcut(keybind as KeyId, {
     description: "Toggle voice dictation recording",
@@ -123,31 +121,25 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
 
   pi.on("session_start", (_event, ctx) => {
     if (!ctx.hasUI) return;
-    statusIndicator.attach(ctx);
 
-    unsubscribeTerminalInput?.();
-    unsubscribeTerminalInput = ctx.ui.onTerminalInput((data) => {
-      const mode = controller.getMode();
-      if (mode === "idle") return undefined;
-
-      if (matchesKey(data, "escape")) {
-        void controller.cancel(ctx).catch((error: unknown) => reportError(ctx, error));
-        return { consume: true };
-      }
-
-      if (mode === "recording" && matchesKey(data, "enter")) {
-        void controller.stopAndSubmit(ctx).catch((error: unknown) => reportError(ctx, error));
-        return { consume: true };
-      }
-
-      return undefined;
-    });
+    const previousEditor = ctx.ui.getEditorComponent();
+    ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
+      keybind,
+      ctx,
+      getMode: () => controller.getMode(),
+      renderLabel: (theme) => inputIndicator.renderLabel(theme),
+      attachTui: (tui) => inputIndicator.attach(tui),
+      onCancel: (handlerCtx) => {
+        void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+      },
+      onSend: (handlerCtx) => {
+        void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+      },
+    }));
   });
 
-  pi.on("session_shutdown", async (_event, ctx) => {
-    unsubscribeTerminalInput?.();
-    unsubscribeTerminalInput = undefined;
+  pi.on("session_shutdown", async () => {
     await controller.dispose();
-    statusIndicator.dispose(ctx);
+    inputIndicator.dispose();
   });
 }
