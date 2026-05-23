@@ -134,33 +134,65 @@ class VoiceEditorWrapper implements EditorComponent {
   }
 }
 
+const RECORDING_WAVES = ["▁▂▃", "▂▃▄", "▃▄▅", "▄▅▆", "▅▆▇", "▄▅▆", "▃▄▅", "▂▃▄"];
+const RECORDING_PULSES = ["●", "◉", "◎", "◉"];
+const PROCESSING_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 export const createInputIndicator = (keybind: string) => {
   let mode: DictationMode = "idle";
   let tui: TUI | undefined;
+  let tick = 0;
+  let timer: ReturnType<typeof setInterval> | undefined;
 
   const requestRender = () => tui?.requestRender();
+
+  const stopAnimation = () => {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = undefined;
+  };
+
+  const startAnimation = () => {
+    if (timer || mode === "idle") return;
+    timer = setInterval(() => {
+      tick += 1;
+      requestRender();
+    }, 120);
+  };
+
+  const syncAnimation = () => {
+    if (mode === "idle") stopAnimation();
+    else startAnimation();
+  };
 
   return {
     attach(tuiInstance: TUI) {
       tui = tuiInstance;
+      syncAnimation();
       requestRender();
     },
     setMode(nextMode: DictationMode) {
       mode = nextMode;
+      tick += 1;
+      syncAnimation();
       requestRender();
     },
     renderLabel(theme: Theme): string {
       if (mode === "recording") {
-        return `${theme.fg("accent", "●")} ${theme.fg("muted", "recording")} ${theme.fg("dim", "· enter send · esc cancel")}`;
+        const pulse = RECORDING_PULSES[tick % RECORDING_PULSES.length] ?? "●";
+        const wave = RECORDING_WAVES[tick % RECORDING_WAVES.length] ?? "▁▂▃";
+        return `${theme.fg("accent", pulse)} ${theme.fg("accent", wave)} ${theme.fg("muted", "recording")} ${theme.fg("dim", "· enter send · esc cancel")}`;
       }
 
       if (mode === "processing") {
-        return `${theme.fg("accent", "…")} ${theme.fg("muted", "transcribing")} ${theme.fg("dim", "· esc cancel")}`;
+        const frame = PROCESSING_FRAMES[tick % PROCESSING_FRAMES.length] ?? "…";
+        return `${theme.fg("accent", frame)} ${theme.fg("muted", "transcribing")} ${theme.fg("dim", "· esc cancel")}`;
       }
 
       return `${theme.fg("dim", "voice")} ${theme.fg("accent", keybind)}`;
     },
     dispose() {
+      stopAnimation();
       tui = undefined;
       mode = "idle";
     },
