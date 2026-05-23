@@ -1,4 +1,13 @@
-import type { CaptureConfig, MistralProviderConfig, OpenAiCompatibleProviderConfig, OutputConfig } from "./types";
+import type {
+  AssemblyAiProviderConfig,
+  CaptureConfig,
+  DeepgramProviderConfig,
+  ElevenLabsProviderConfig,
+  GladiaProviderConfig,
+  MistralProviderConfig,
+  OpenAiCompatibleProviderConfig,
+  OutputConfig,
+} from "./types";
 
 const platformCaptureDefaults = (): Pick<CaptureConfig, "inputFormat" | "input"> => {
   if (process.platform === "darwin") return { inputFormat: "avfoundation", input: ":0" };
@@ -40,6 +49,59 @@ export const defaultOpenAiCompatibleProviderConfig = {
   keychainService: "",
   keychainAccount: "",
 } satisfies OpenAiCompatibleProviderConfig;
+
+export const defaultDeepgramProviderConfig = {
+  type: "deepgram",
+  endpoint: "https://api.deepgram.com/v1/listen",
+  model: "nova-3",
+  language: "",
+  timeoutSeconds: 120,
+  smartFormat: true,
+  apiKey: "",
+  apiKeyEnv: "DEEPGRAM_API_KEY",
+  keychainService: "",
+  keychainAccount: "",
+} satisfies DeepgramProviderConfig;
+
+export const defaultElevenLabsProviderConfig = {
+  type: "elevenlabs",
+  endpoint: "https://api.elevenlabs.io/v1/speech-to-text",
+  model: "scribe_v1",
+  language: "",
+  timeoutSeconds: 120,
+  apiKey: "",
+  apiKeyEnv: "ELEVENLABS_API_KEY",
+  keychainService: "",
+  keychainAccount: "",
+} satisfies ElevenLabsProviderConfig;
+
+export const defaultGladiaProviderConfig = {
+  type: "gladia",
+  uploadEndpoint: "https://api.gladia.io/v2/upload",
+  transcriptionEndpoint: "https://api.gladia.io/v2/transcription",
+  model: "default",
+  language: "",
+  timeoutSeconds: 300,
+  pollIntervalMs: 1000,
+  apiKey: "",
+  apiKeyEnv: "GLADIA_API_KEY",
+  keychainService: "",
+  keychainAccount: "",
+} satisfies GladiaProviderConfig;
+
+export const defaultAssemblyAiProviderConfig = {
+  type: "assemblyai",
+  uploadEndpoint: "https://api.assemblyai.com/v2/upload",
+  transcriptEndpoint: "https://api.assemblyai.com/v2/transcript",
+  model: "universal",
+  language: "",
+  timeoutSeconds: 300,
+  pollIntervalMs: 1000,
+  apiKey: "",
+  apiKeyEnv: "ASSEMBLYAI_API_KEY",
+  keychainService: "",
+  keychainAccount: "",
+} satisfies AssemblyAiProviderConfig;
 
 export const defaultOutputConfig = {
   appendTrailingSpace: true,

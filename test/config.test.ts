@@ -23,19 +23,72 @@ test("endpointRequiresAuth skips auth for local HTTP", () => {
   assert.equal(endpointRequiresAuth("https://api.openai.com/v1/audio/transcriptions"), true);
 });
 
-test("loadConfig supports Groq convenience provider", async () => {
+const withConfig = async (payload: unknown, run: (configPath: string) => Promise<void>) => {
   const dir = await mkdtemp(join(tmpdir(), "pi-voice-stt-test-"));
   const configPath = join(dir, "config.json");
-  await writeFile(configPath, JSON.stringify({ provider: { type: "groq", apiKey: "test", language: "fr" } }), "utf8");
+  await writeFile(configPath, JSON.stringify(payload), "utf8");
 
   try {
+    await run(configPath);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+};
+
+test("loadConfig supports Groq convenience provider", async () => {
+  await withConfig({ provider: { type: "groq", apiKey: "test", language: "fr" } }, async (configPath) => {
     const config = await loadConfig({ configPath });
     assert.equal(config.provider.type, "openai-compatible");
     assert.equal(config.provider.endpoint, "https://api.groq.com/openai/v1/audio/transcriptions");
     assert.equal(config.provider.model, "whisper-large-v3-turbo");
     assert.equal(config.provider.language, "fr");
     assert.equal(config.provider.apiKey, "test");
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  });
+});
+
+test("loadConfig supports OpenAI convenience provider", async () => {
+  await withConfig({ provider: { type: "openai", apiKey: "test" } }, async (configPath) => {
+    const config = await loadConfig({ configPath });
+    assert.equal(config.provider.type, "openai-compatible");
+    assert.equal(config.provider.endpoint, "https://api.openai.com/v1/audio/transcriptions");
+    assert.equal(config.provider.model, "gpt-4o-mini-transcribe");
+    assert.equal(config.provider.apiKey, "test");
+  });
+});
+
+test("loadConfig supports Deepgram", async () => {
+  await withConfig({ provider: { type: "deepgram", apiKey: "test", language: "en" } }, async (configPath) => {
+    const config = await loadConfig({ configPath });
+    assert.equal(config.provider.type, "deepgram");
+    assert.equal(config.provider.model, "nova-3");
+    assert.equal(config.provider.language, "en");
+    assert.equal(config.provider.apiKey, "test");
+  });
+});
+
+test("loadConfig supports ElevenLabs", async () => {
+  await withConfig({ provider: { type: "elevenlabs", apiKey: "test" } }, async (configPath) => {
+    const config = await loadConfig({ configPath });
+    assert.equal(config.provider.type, "elevenlabs");
+    assert.equal(config.provider.model, "scribe_v1");
+    assert.equal(config.provider.apiKey, "test");
+  });
+});
+
+test("loadConfig supports Gladia and Gradium alias", async () => {
+  await withConfig({ provider: { type: "gradium", apiKey: "test", language: "fr" } }, async (configPath) => {
+    const config = await loadConfig({ configPath });
+    assert.equal(config.provider.type, "gladia");
+    assert.equal(config.provider.language, "fr");
+    assert.equal(config.provider.apiKey, "test");
+  });
+});
+
+test("loadConfig supports AssemblyAI", async () => {
+  await withConfig({ provider: { type: "assemblyai", apiKey: "test", model: "universal" } }, async (configPath) => {
+    const config = await loadConfig({ configPath });
+    assert.equal(config.provider.type, "assemblyai");
+    assert.equal(config.provider.model, "universal");
+    assert.equal(config.provider.apiKey, "test");
+  });
 });

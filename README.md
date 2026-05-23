@@ -13,7 +13,8 @@ This project is intentionally small and hackable: a Pi extension, an `ffmpeg` re
 - Pi-native animated input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `• transcribing`).
 - `ffmpeg` microphone capture to temporary WAV files.
 - Mistral Voxtral provider.
-- OpenAI-compatible provider for OpenAI, Groq, `whisper.cpp`, `faster-whisper` servers, and local endpoints.
+- OpenAI / Groq / generic OpenAI-compatible provider for hosted and local Whisper-style endpoints.
+- Native provider integrations for Deepgram, ElevenLabs Scribe, Gladia, and AssemblyAI.
 - Environment variable and macOS Keychain secret lookup.
 - HTTPS-by-default endpoint policy; plain HTTP is allowed only for loopback hosts.
 - TypeScript source loaded directly by Pi; no build step required for runtime.
@@ -24,7 +25,7 @@ This project is intentionally small and hackable: a Pi extension, an `ffmpeg` re
 - Node.js `>= 20` when developing locally.
 - `ffmpeg` available in `PATH` or configured with `capture.ffmpegPath`.
 - Microphone permission for the terminal app running Pi.
-- A transcription backend (Mistral, Groq/OpenAI, or a local OpenAI-compatible server).
+- A transcription backend (Mistral, OpenAI/Groq, Deepgram, ElevenLabs, Gladia, AssemblyAI, or a local OpenAI-compatible server).
 
 ## Installation
 
@@ -96,6 +97,21 @@ or a top-level `keybind` in the config file. Environment wins at startup.
 }
 ```
 
+### OpenAI
+
+```json
+{
+  "provider": {
+    "type": "openai",
+    "model": "gpt-4o-mini-transcribe",
+    "apiKeyEnv": "OPENAI_API_KEY",
+    "language": "en"
+  }
+}
+```
+
+You can also use `model: "whisper-1"` or any OpenAI transcription model supported by your account.
+
 ### Groq / Whisper
 
 ```json
@@ -119,6 +135,62 @@ or a top-level `keybind` in the config file. Environment wins at startup.
     "model": "whisper-1",
     "apiKeyEnv": "OPENAI_API_KEY",
     "language": "en"
+  }
+}
+```
+
+### Deepgram
+
+```json
+{
+  "provider": {
+    "type": "deepgram",
+    "model": "nova-3",
+    "apiKeyEnv": "DEEPGRAM_API_KEY",
+    "language": "en",
+    "smartFormat": true
+  }
+}
+```
+
+### ElevenLabs Scribe
+
+```json
+{
+  "provider": {
+    "type": "elevenlabs",
+    "model": "scribe_v1",
+    "apiKeyEnv": "ELEVENLABS_API_KEY",
+    "language": "en"
+  }
+}
+```
+
+### Gladia
+
+```json
+{
+  "provider": {
+    "type": "gladia",
+    "apiKeyEnv": "GLADIA_API_KEY",
+    "language": "en",
+    "pollIntervalMs": 1000
+  }
+}
+```
+
+`"gradium"` is accepted as a compatibility alias for `"gladia"` in case you remember the provider by that name.
+
+### AssemblyAI
+
+```json
+{
+  "provider": {
+    "type": "assemblyai",
+    "model": "universal",
+    "apiKeyEnv": "ASSEMBLYAI_API_KEY",
+    "language": "en",
+    "pollIntervalMs": 1000
   }
 }
 ```
@@ -182,8 +254,12 @@ Prefer environment variables:
 
 ```bash
 export MISTRAL_API_KEY=...
-export GROQ_API_KEY=...
 export OPENAI_API_KEY=...
+export GROQ_API_KEY=...
+export DEEPGRAM_API_KEY=...
+export ELEVENLABS_API_KEY=...
+export GLADIA_API_KEY=...
+export ASSEMBLYAI_API_KEY=...
 ```
 
 On macOS, you can also use Keychain:

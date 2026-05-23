@@ -1,11 +1,30 @@
 import { readFile } from "node:fs/promises";
-import { defaultCaptureConfig, defaultMistralProviderConfig, defaultOpenAiCompatibleProviderConfig, defaultOutputConfig } from "./defaults";
+import {
+  defaultAssemblyAiProviderConfig,
+  defaultCaptureConfig,
+  defaultDeepgramProviderConfig,
+  defaultElevenLabsProviderConfig,
+  defaultGladiaProviderConfig,
+  defaultMistralProviderConfig,
+  defaultOpenAiCompatibleProviderConfig,
+  defaultOutputConfig,
+} from "./defaults";
 import { secureEndpointFrom } from "./endpoint";
-import type { CaptureConfig, MistralProviderConfig, OpenAiCompatibleProviderConfig, PluginConfig, ProviderConfig } from "./types";
+import type {
+  AssemblyAiProviderConfig,
+  CaptureConfig,
+  DeepgramProviderConfig,
+  ElevenLabsProviderConfig,
+  GladiaProviderConfig,
+  MistralProviderConfig,
+  OpenAiCompatibleProviderConfig,
+  PluginConfig,
+  ProviderConfig,
+} from "./types";
 import { resolveApiKey } from "../secrets/resolve-api-key";
 import { booleanFrom, objectFrom, positiveIntegerFrom, textFrom } from "../utils/coerce";
-import { formatError } from "../utils/text";
 import { resolvePath } from "../utils/path";
+import { formatError } from "../utils/text";
 
 export const readConfigFile = async (filePath: string): Promise<Record<string, unknown>> => {
   if (!filePath) return {};
@@ -49,43 +68,93 @@ const envNameFrom = (value: unknown, fallback: string): string => {
   return fallback;
 };
 
-const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => {
+const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeoutSeconds: number }>(
+  merged: Record<string, unknown>,
+  provider: Record<string, unknown>,
+  defaults: TDefault,
+) => {
   const secrets = secretSourceFrom(merged, provider);
   return {
-    type: "mistral",
-    endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint),
-    model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
-    language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
-    timeoutSeconds: positiveIntegerFrom(provider.timeoutSeconds ?? merged.requestTimeoutSeconds, defaultMistralProviderConfig.timeoutSeconds),
-    apiKey: await resolveApiKey(secrets, defaultMistralProviderConfig.apiKeyEnv),
-    apiKeyEnv: envNameFrom(secrets.apiKeyEnv, defaultMistralProviderConfig.apiKeyEnv),
+    timeoutSeconds: positiveIntegerFrom(provider.timeoutSeconds ?? merged.requestTimeoutSeconds, defaults.timeoutSeconds),
+    apiKey: await resolveApiKey(secrets, defaults.apiKeyEnv),
+    apiKeyEnv: envNameFrom(secrets.apiKeyEnv, defaults.apiKeyEnv),
     keychainService: textFrom(secrets.keychainService),
     keychainAccount: textFrom(secrets.keychainAccount),
   };
 };
+
+const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => ({
+  type: "mistral",
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint),
+  model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
+  ...(await commonProviderFields(merged, provider, defaultMistralProviderConfig)),
+});
 
 const openAiCompatibleProviderFrom = async (
   merged: Record<string, unknown>,
   provider: Record<string, unknown>,
-): Promise<OpenAiCompatibleProviderConfig> => {
-  const secrets = secretSourceFrom(merged, provider);
-  return {
-    type: "openai-compatible",
-    endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
-    model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
-    language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
-    timeoutSeconds: positiveIntegerFrom(provider.timeoutSeconds ?? merged.requestTimeoutSeconds, defaultOpenAiCompatibleProviderConfig.timeoutSeconds),
-    responseFormat: "json",
-    apiKey: await resolveApiKey(secrets, defaultOpenAiCompatibleProviderConfig.apiKeyEnv),
-    apiKeyEnv: envNameFrom(secrets.apiKeyEnv, defaultOpenAiCompatibleProviderConfig.apiKeyEnv),
-    keychainService: textFrom(secrets.keychainService),
-    keychainAccount: textFrom(secrets.keychainAccount),
-  };
-};
+): Promise<OpenAiCompatibleProviderConfig> => ({
+  type: "openai-compatible",
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
+  model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
+  responseFormat: "json",
+  ...(await commonProviderFields(merged, provider, defaultOpenAiCompatibleProviderConfig)),
+});
+
+const deepgramProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<DeepgramProviderConfig> => ({
+  type: "deepgram",
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultDeepgramProviderConfig.endpoint),
+  model: textFrom(provider.model, textFrom(merged.model, defaultDeepgramProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultDeepgramProviderConfig.language)),
+  smartFormat: booleanFrom(provider.smartFormat ?? merged.smartFormat, defaultDeepgramProviderConfig.smartFormat),
+  ...(await commonProviderFields(merged, provider, defaultDeepgramProviderConfig)),
+});
+
+const elevenLabsProviderFrom = async (
+  merged: Record<string, unknown>,
+  provider: Record<string, unknown>,
+): Promise<ElevenLabsProviderConfig> => ({
+  type: "elevenlabs",
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultElevenLabsProviderConfig.endpoint),
+  model: textFrom(provider.model, textFrom(merged.model, defaultElevenLabsProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultElevenLabsProviderConfig.language)),
+  ...(await commonProviderFields(merged, provider, defaultElevenLabsProviderConfig)),
+});
+
+const gladiaProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<GladiaProviderConfig> => ({
+  type: "gladia",
+  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultGladiaProviderConfig.uploadEndpoint),
+  transcriptionEndpoint: secureEndpointFrom(
+    provider.transcriptionEndpoint ?? provider.transcription_endpoint ?? merged.transcriptionEndpoint,
+    defaultGladiaProviderConfig.transcriptionEndpoint,
+  ),
+  model: textFrom(provider.model, textFrom(merged.model, defaultGladiaProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultGladiaProviderConfig.language)),
+  pollIntervalMs: positiveIntegerFrom(provider.pollIntervalMs ?? merged.pollIntervalMs, defaultGladiaProviderConfig.pollIntervalMs),
+  ...(await commonProviderFields(merged, provider, defaultGladiaProviderConfig)),
+});
+
+const assemblyAiProviderFrom = async (
+  merged: Record<string, unknown>,
+  provider: Record<string, unknown>,
+): Promise<AssemblyAiProviderConfig> => ({
+  type: "assemblyai",
+  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultAssemblyAiProviderConfig.uploadEndpoint),
+  transcriptEndpoint: secureEndpointFrom(
+    provider.transcriptEndpoint ?? provider.transcript_endpoint ?? merged.transcriptEndpoint,
+    defaultAssemblyAiProviderConfig.transcriptEndpoint,
+  ),
+  model: textFrom(provider.model, textFrom(merged.model, defaultAssemblyAiProviderConfig.model)),
+  language: textFrom(provider.language, textFrom(merged.language, defaultAssemblyAiProviderConfig.language)),
+  pollIntervalMs: positiveIntegerFrom(provider.pollIntervalMs ?? merged.pollIntervalMs, defaultAssemblyAiProviderConfig.pollIntervalMs),
+  ...(await commonProviderFields(merged, provider, defaultAssemblyAiProviderConfig)),
+});
 
 const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderConfig> => {
   const provider = objectFrom(merged.provider);
-  const providerType = textFrom(provider.type, textFrom(merged.provider, defaultMistralProviderConfig.type));
+  const providerType = textFrom(provider.type, textFrom(merged.provider, defaultMistralProviderConfig.type)).toLowerCase();
 
   if (providerType === "mistral" || providerType === "voxtral") return mistralProviderFrom(merged, provider);
 
@@ -94,9 +163,16 @@ const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderCo
       ? { endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", model: "whisper-large-v3-turbo", apiKeyEnv: "GROQ_API_KEY" }
       : providerType === "local"
         ? { endpoint: "http://localhost:10301/v1/audio/transcriptions", model: "whisper-1", apiKeyEnv: "" }
-        : {};
+        : providerType === "openai"
+          ? { endpoint: "https://api.openai.com/v1/audio/transcriptions", model: "gpt-4o-mini-transcribe", apiKeyEnv: "OPENAI_API_KEY" }
+          : {};
     return openAiCompatibleProviderFrom({ ...merged, ...providerDefaults }, provider);
   }
+
+  if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
+  if (providerType === "elevenlabs" || providerType === "eleven-labs" || providerType === "scribe") return elevenLabsProviderFrom(merged, provider);
+  if (providerType === "gladia" || providerType === "gradium") return gladiaProviderFrom(merged, provider);
+  if (providerType === "assemblyai" || providerType === "assembly-ai") return assemblyAiProviderFrom(merged, provider);
 
   throw new Error(`Unsupported STT provider: ${providerType}`);
 };

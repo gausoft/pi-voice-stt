@@ -33,7 +33,50 @@ export type OpenAiCompatibleProviderConfig = SecretConfig & {
   responseFormat: "json";
 };
 
-export type ProviderConfig = MistralProviderConfig | OpenAiCompatibleProviderConfig;
+export type DeepgramProviderConfig = SecretConfig & {
+  type: "deepgram";
+  endpoint: string;
+  model: string;
+  language: string;
+  timeoutSeconds: number;
+  smartFormat: boolean;
+};
+
+export type ElevenLabsProviderConfig = SecretConfig & {
+  type: "elevenlabs";
+  endpoint: string;
+  model: string;
+  language: string;
+  timeoutSeconds: number;
+};
+
+export type GladiaProviderConfig = SecretConfig & {
+  type: "gladia";
+  uploadEndpoint: string;
+  transcriptionEndpoint: string;
+  model: string;
+  language: string;
+  timeoutSeconds: number;
+  pollIntervalMs: number;
+};
+
+export type AssemblyAiProviderConfig = SecretConfig & {
+  type: "assemblyai";
+  uploadEndpoint: string;
+  transcriptEndpoint: string;
+  model: string;
+  language: string;
+  timeoutSeconds: number;
+  pollIntervalMs: number;
+};
+
+export type ProviderConfig =
+  | MistralProviderConfig
+  | OpenAiCompatibleProviderConfig
+  | DeepgramProviderConfig
+  | ElevenLabsProviderConfig
+  | GladiaProviderConfig
+  | AssemblyAiProviderConfig;
 
 export type OutputConfig = {
   appendTrailingSpace: boolean;
