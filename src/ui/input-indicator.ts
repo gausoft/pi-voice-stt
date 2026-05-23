@@ -135,7 +135,7 @@ class VoiceEditorWrapper implements EditorComponent {
 }
 
 const RECORDING_PULSES = ["●", "●", "●", "·"];
-const PROCESSING_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const PROCESSING_FRAMES = ["•  ", " • ", "  •", " • "];
 
 export const createInputIndicator = (keybind: string) => {
   let mode: DictationMode = "idle";
